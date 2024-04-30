@@ -17,7 +17,7 @@ testMail addr = mail [personalization (fromList [addr])]
 
 main :: IO ()
 main = do
-  sendgridKey  <- getSendGridKey
+  sendgridKey  <- getSendGridSettings
   testMailAddr <- getTestEmailAddress
   defaultMain $ testGroup
     "SendGrid v3 API"
@@ -42,14 +42,14 @@ main = do
         Right r   -> r ^. responseStatus . statusCode @?= 202
     ]
 
-getSendGridKey :: IO ApiKey
-getSendGridKey = do
+getSendGridSettings :: IO SendGridSettings
+getSendGridSettings = do
   envKey <- lookupEnv "SENDGRID_API_KEY"
   case envKey of
     Nothing ->
       error
         "Please supply a Sendgrid api key for testing via the ENV var `SENDGRID_API_KEY`"
-    Just k -> return $ ApiKey $ T.pack k
+    Just k -> mkSendGridSettings $ T.pack k
 
 getTestEmailAddress :: IO MailAddress
 getTestEmailAddress = do
