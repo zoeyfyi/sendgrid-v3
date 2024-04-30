@@ -24,21 +24,21 @@ main = do
     [ testCase "Send email simple" $ do
       eResponse <- sendMail sendgridKey (testMail testMailAddr)
       case eResponse of
-        Left  err -> error "Failed to send simple email"
+        Left  err -> assertFailure $ "Failed to send simple email: " <> show err
         Right r   -> r ^. responseStatus . statusCode @?= 202
     , testCase "Send email with opts" $ do
       eResponse <- sendMail
         sendgridKey
         ((testMail testMailAddr) { _mailSendAt = Just 1516468000 })
       case eResponse of
-        Left  err -> error "Failed to send email with opts"
+        Left  err -> assertFailure $ "Failed to send email with opts: " <> show err
         Right r   -> r ^. responseStatus . statusCode @?= 202
     , testCase "Send an email payload with categories correctly" $ do
       let email =
             (testMail testMailAddr) { _mailCategories = Just ["fake-category"] }
       eResponse <- sendMail sendgridKey email
       case eResponse of
-        Left  err -> error "Failed to send email with opts"
+        Left  err -> assertFailure $ "Failed to send email with opts: " <> show err
         Right r   -> r ^. responseStatus . statusCode @?= 202
     ]
 
