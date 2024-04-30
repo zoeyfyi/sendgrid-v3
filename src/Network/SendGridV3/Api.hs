@@ -40,6 +40,7 @@ import           Control.Lens                      hiding ( from
                                                           )
 import           Data.Aeson
 import           Data.Aeson.TH
+import qualified Data.ByteString               as B
 import           Data.ByteString.Lazy                     ( ByteString )
 import           Data.Char                                ( toLower )
 import           Data.List.NonEmpty                       ( NonEmpty )
@@ -50,6 +51,10 @@ import           Data.Text.Encoding
 import           Network.HTTP.Client                      ( HttpException )
 import           Network.SendGridV3.JSON                  ( unPrefix )
 import           Network.Wreq                      hiding ( Options )
+import           Network.HTTP.Client.TLS                  ( mkManagerSettings )
+import           Network.Connection                       (TLSSettings(..))
+import           Network.TLS                              (Supported (..), ClientParams (..), EMSMode(..))
+import           Network.Simple.TCP.TLS                   (newDefaultClientParams)
 
 -- | URL to SendGrid Mail API
 sendGridAPI :: T.Text
@@ -451,10 +456,26 @@ sendMail
   -> Mail a b
   -> IO (Either HttpException (Response ByteString))
 sendMail (ApiKey key) mail' = do
-  let tkn = encodeUtf8 $ "Bearer " <> key
+  clientParams <- newDefaultClientParams ("api.sendgrid.com", B.empty)
+  
+  let -- Sendgrid does not support extended master secret (as of april 2024), 
+      -- which can be verified by the following command:
+      -- 
+      -- openssl s_client -connect api.sendgrid.com:443
+      -- 
+      -- tls-2.0.0 changes the default EMS policy to required
+      -- this overrides that setting and restores it to its original value: allow
+      --
+      -- git-annex has a simular issue: https://git-annex.branchable.com/bugs/tls__58___peer_does_not_support_Extended_Main_Secret/
+      supported = (clientSupported clientParams) { supportedExtendedMainSecret = AllowEMS }
+      clientParams' = clientParams {clientSupported = supported}
+      tlsManager = mkManagerSettings (TLSSettings clientParams') Nothing
+      
+      tkn = encodeUtf8 $ "Bearer " <> key
       opts =
         defaults
           & (header "Authorization" .~ [tkn])
           . (header "Content-Type" .~ ["application/json"])
+          . (manager .~ Left tlsManager)
 
   try . postWith opts (T.unpack sendGridAPI) $ encode (toJSON mail')
