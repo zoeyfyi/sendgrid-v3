@@ -39,7 +39,7 @@ library
                      , http-client >= 0.5
                      , http-client-tls >= 0.3
                      , crypton-connection >= 0.3
-                     , tls >= 2.0
+                     , tls >= 1.8
                      , network-simple-tls >= 0.4
                      , bytestring >= 0.10.8
   hs-source-dirs:      src

@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell   #-}
+{-# LANGUAGE CPP #-}
 
 -- | Module that implements the Mail API of SendGrid v3.
 --   https://sendgrid.com/docs/API_Reference/api_v3.html
@@ -85,7 +86,12 @@ mkSendGridSettings apiKey = do
   -- this overrides that setting and restores it to its original value: allow
   --
   -- git-annex has a simular issue: https://git-annex.branchable.com/bugs/tls__58___peer_does_not_support_Extended_Main_Secret/
-  let supported = (clientSupported clientParams) { supportedExtendedMainSecret = AllowEMS }
+  let 
+#if MIN_VERSION_tls(2,0,0) 
+      supported = (clientSupported clientParams) { supportedExtendedMainSecret = AllowEMS }
+#else
+      supported = (clientSupported clientParams) { supportedExtendedMasterSec = AllowEMS }
+#endif
       clientParams' = clientParams {clientSupported = supported}
       tlsManagerSettings = mkManagerSettings (TLSSettings clientParams') Nothing
 
